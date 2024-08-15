@@ -1,9 +1,11 @@
+using CellSpace;
 using UnityEngine;
 
 namespace RowSpace
 {
-    public class Row : MonoBehaviour
+    public sealed class Row : MonoBehaviour
     {
-    
+        public Cell[] Cells;
+        
     }
 }
