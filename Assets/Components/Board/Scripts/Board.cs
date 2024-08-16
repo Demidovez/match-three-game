@@ -21,13 +21,13 @@ namespace BoardSpace
         
         [SerializeField] private AudioClip _audioClip;
         [SerializeField] private AudioSource _audioSource;
+        [SerializeField] private float _tweenDuration = 0.25f;
         
         public int CountRows => Cells.GetLength(0); 
         public int CountColumns => Cells.GetLength(1);
 
         private readonly List<Cell> _selectedCells = new();
-        private const float TweenDuration = 0.25f;
-
+        
         private void Awake()
         {
             Instance = this;
@@ -54,14 +54,7 @@ namespace BoardSpace
 
         public async void Select(Cell cell)
         {
-            if (_selectedCells.Count > 0 && !_selectedCells.Contains(cell))
-            {
-                if (Array.IndexOf(_selectedCells[0].Neighbours, cell) != -1)
-                {
-                    _selectedCells.Add(cell);
-                }
-            }
-            else
+            if (!_selectedCells.Contains(cell))
             {
                 _selectedCells.Add(cell);
             }
@@ -77,10 +70,6 @@ namespace BoardSpace
             {
                 Pop();
             }
-            // else
-            // {
-            //     await Swap(_selectedCells[0], _selectedCells[1]);
-            // }
             
             _selectedCells.Clear();
         }
@@ -96,8 +85,8 @@ namespace BoardSpace
             var icon2Transform = icon2.transform;
 
             await DOTween.Sequence()
-                .Join(icon1Transform.DOMove(icon2Transform.position, TweenDuration))
-                .Join(icon2Transform.DOMove(icon1Transform.position, TweenDuration))
+                .Join(icon1Transform.DOMove(icon2Transform.position, _tweenDuration))
+                .Join(icon2Transform.DOMove(icon1Transform.position, _tweenDuration))
                 .Play().AsyncWaitForCompletion();
             
             icon1Transform.SetParent(cell2.transform);
@@ -113,7 +102,7 @@ namespace BoardSpace
             {
                 for (int y = 0; y < CountColumns; y++)
                 {
-                    if (Cells[x, y].GetConnectedCells().Skip(1).Count() >= 2)
+                    if (Cells[x, y].GetConnectedCells() != null)
                     {
                         return true;
                     }
@@ -131,13 +120,13 @@ namespace BoardSpace
                 {
                     var cells = Cells[x, y].GetConnectedCells();
                     
-                    if(cells.Skip(1).Count() < 2) continue;
+                    if(cells == null || cells.Skip(1).Count() < 2) continue;
                     
                     var deflateSequence = DOTween.Sequence();
 
                     foreach (var cell in cells)
                     {
-                        deflateSequence.Join(cell.Icon.transform.DOScale(Vector3.zero, TweenDuration));
+                        deflateSequence.Join(cell.Icon.transform.DOScale(Vector3.zero, _tweenDuration));
                     }
 
                     _audioSource.PlayOneShot(_audioClip);
@@ -151,7 +140,7 @@ namespace BoardSpace
                     foreach (var cell in cells)
                     {
                         cell.Item = Database.Items[Random.Range(0, Database.Items.Length)];
-                        inflateSequence.Join(cell.Icon.transform.DOScale(Vector3.one, TweenDuration));
+                        inflateSequence.Join(cell.Icon.transform.DOScale(Vector3.one, _tweenDuration));
                     }
                     
                     await inflateSequence.Play().AsyncWaitForCompletion();

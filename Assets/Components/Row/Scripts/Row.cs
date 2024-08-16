@@ -6,6 +6,5 @@ namespace RowSpace
     public sealed class Row : MonoBehaviour
     {
         public Cell[] Cells;
-        
     }
 }
