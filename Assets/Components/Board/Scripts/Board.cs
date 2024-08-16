@@ -6,7 +6,7 @@ using CellSpace;
 using DatabaseSpace;
 using DG.Tweening;
 using RowSpace;
-using Unity.VisualScripting;
+using ScoreSpace;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -19,8 +19,11 @@ namespace BoardSpace
         public Row[] Rows;
         public Cell[,] Cells { get; private set; }
         
-        public int Width => Cells.GetLength(1); 
-        public int Height => Cells.GetLength(0);
+        [SerializeField] private AudioClip _audioClip;
+        [SerializeField] private AudioSource _audioSource;
+        
+        public int CountRows => Cells.GetLength(0); 
+        public int CountColumns => Cells.GetLength(1);
 
         private readonly List<Cell> _selectedCells = new();
         private const float TweenDuration = 0.25f;
@@ -34,11 +37,11 @@ namespace BoardSpace
         {
             Cells = new Cell[Rows.Length, Rows.Max(row => row.Cells.Length)];
 
-            for (int y = 0; y < Height; y++)
+            for (int x = 0; x < CountRows; x++)
             {
-                for (int x = 0; x < Width; x++)
+                for (int y = 0; y < CountColumns; y++)
                 {
-                    var cell = Rows[y].Cells[x];
+                    var cell = Rows[x].Cells[y];
 
                     cell.x = x;
                     cell.y = y;
@@ -49,24 +52,19 @@ namespace BoardSpace
             }
         }
 
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.A))
-            {
-                foreach (var connectedCell in Cells[0,0].GetConnectedCells())
-                {
-                    connectedCell.Icon.transform.DOScale(1.25f, TweenDuration).Play();
-                }
-            }
-        }
-
         public async void Select(Cell cell)
         {
-            if (!_selectedCells.Contains(cell))
+            if (_selectedCells.Count > 0 && !_selectedCells.Contains(cell))
+            {
+                if (Array.IndexOf(_selectedCells[0].Neighbours, cell) != -1)
+                {
+                    _selectedCells.Add(cell);
+                }
+            }
+            else
             {
                 _selectedCells.Add(cell);
             }
-            
             
             if (_selectedCells.Count < 2)
             {
@@ -74,6 +72,15 @@ namespace BoardSpace
             }
 
             await Swap(_selectedCells[0], _selectedCells[1]);
+
+            if (CanPop())
+            {
+                Pop();
+            }
+            // else
+            // {
+            //     await Swap(_selectedCells[0], _selectedCells[1]);
+            // }
             
             _selectedCells.Clear();
         }
@@ -100,14 +107,59 @@ namespace BoardSpace
             cell2.SetData(icon1, item1);
         }
 
-        private void CanPop()
+        private bool CanPop()
         {
+            for (int x = 0; x < CountRows; x++)
+            {
+                for (int y = 0; y < CountColumns; y++)
+                {
+                    if (Cells[x, y].GetConnectedCells().Skip(1).Count() >= 2)
+                    {
+                        return true;
+                    }
+                }
+            }
             
+            return false;
         }
 
-        private void Pop()
+        private async void Pop()
         {
-            
+            for (int x = 0; x < CountRows; x++)
+            {
+                for (int y = 0; y < CountColumns; y++)
+                {
+                    var cells = Cells[x, y].GetConnectedCells();
+                    
+                    if(cells.Skip(1).Count() < 2) continue;
+                    
+                    var deflateSequence = DOTween.Sequence();
+
+                    foreach (var cell in cells)
+                    {
+                        deflateSequence.Join(cell.Icon.transform.DOScale(Vector3.zero, TweenDuration));
+                    }
+
+                    _audioSource.PlayOneShot(_audioClip);
+                    
+                    Score.Instance.Value += Cells[x, y].Item.Value * cells.Count;
+                    
+                    await deflateSequence.Play().AsyncWaitForCompletion();
+                    
+                    var inflateSequence = DOTween.Sequence();
+                    
+                    foreach (var cell in cells)
+                    {
+                        cell.Item = Database.Items[Random.Range(0, Database.Items.Length)];
+                        inflateSequence.Join(cell.Icon.transform.DOScale(Vector3.one, TweenDuration));
+                    }
+                    
+                    await inflateSequence.Play().AsyncWaitForCompletion();
+                    
+                    y = CountColumns;
+                    x = -1;
+                }
+            }
         }
     }
 }

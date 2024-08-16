@@ -32,10 +32,10 @@ namespace CellSpace
 
         private Cell Left => y > 0 ? Board.Instance.Cells[x, y - 1] : null;
         private Cell Top => x > 0 ? Board.Instance.Cells[x - 1, y] : null;
-        private Cell Right => y < Board.Instance.Width - 1 ? Board.Instance.Cells[x, y + 1] : null;
-        private Cell Bottom => x < Board.Instance.Height - 1 ? Board.Instance.Cells[x + 1, y] : null;
+        private Cell Right => y < Board.Instance.CountColumns - 1 ? Board.Instance.Cells[x, y + 1] : null;
+        private Cell Bottom => x < Board.Instance.CountRows - 1 ? Board.Instance.Cells[x + 1, y] : null;
 
-        private Cell[] Neighbours => new[]
+        public Cell[] Neighbours => new[]
         {
             Left,
             Right,
@@ -67,7 +67,7 @@ namespace CellSpace
 
             foreach (var neighbour in Neighbours)
             {
-                if (neighbour == null || excluse.Contains(neighbour) || neighbour.Item != Item)
+                if (!neighbour || excluse.Contains(neighbour) || neighbour.Item != Item)
                 {
                     continue;
                 }
